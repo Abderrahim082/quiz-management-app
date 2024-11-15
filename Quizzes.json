@@ -1,0 +1,139 @@
+{
+  "quizzes": [
+    {
+      "quizID": "QZ102",
+      "courseId": "BIO101",
+      "teacherId": "T002",
+      "teacherName": "Dr. Michael Smith",
+      "Deadline": "2024-11-15T01:58",
+      "status": "draft",
+      "questions": [],
+      "questionsSelected": [
+        {
+          "question": "sqdqs",
+          "answers": [
+            "sd",
+            "s",
+            "sdq",
+            "qs"
+          ],
+          "correctAnswer": "s",
+          "id": "1731645965089"
+        }
+      ],
+      "id": "5155",
+      "courseName": "Introduction to Biology"
+    },
+    {
+      "quizID": "QZ103",
+      "courseId": "HIST201",
+      "courseName": "World History",
+      "teacherId": "T003",
+      "teacherName": "Dr. Sarah Davis",
+      "Deadline": "2024-12-05T23:59:59Z",
+      "status": "active",
+      "questions": [],
+      "questionsSelected": [
+        {
+          "question": "Who was the first President of the United States?",
+          "answers": [
+            "Abraham Lincoln",
+            "George Washington",
+            "Thomas Jefferson",
+            "James Madison"
+          ],
+          "correctAnswer": "George Washington"
+        },
+        {
+          "question": "What year did World War II end?",
+          "answers": [
+            "1940",
+            "1945",
+            "1950",
+            "1960"
+          ],
+          "correctAnswer": "1945"
+        }
+      ],
+      "id": "4d31"
+    },
+    {
+      "quizID": "QZ104",
+      "courseId": "CHEM101",
+      "courseName": "General Chemistry",
+      "teacherId": "T004",
+      "teacherName": "Dr. Emily Zhang",
+      "Deadline": "2024-12-10T23:59:59Z",
+      "status": "draft",
+      "questions": [],
+      "questionsSelected": [
+        {
+          "question": "What is the chemical symbol for water?",
+          "answers": [
+            "H2O",
+            "O2",
+            "CO2",
+            "HO2"
+          ],
+          "correctAnswer": "H2O"
+        },
+        {
+          "question": "Which element is known as the 'noble gas'?",
+          "answers": [
+            "Oxygen",
+            "Nitrogen",
+            "Neon",
+            "Hydrogen"
+          ],
+          "correctAnswer": "Neon"
+        }
+      ],
+      "id": "afca"
+    },
+    {
+      "id": "5342",
+      "status": "active"
+    },
+    {
+      "id": "746b",
+      "Deadline": "2024-11-01T22:28",
+      "questions": []
+    },
+    {
+      "id": "7e22",
+      "courseId": "BIO101",
+      "Deadline": "2024-11-06T23:18",
+      "status": "active",
+      "questions": []
+    },
+    {
+      "id": "70cc",
+      "courseId": "BIO101",
+      "Deadline": "2024-11-10T23:28",
+      "status": "draft",
+      "questions": []
+    }
+  ],
+  "courses": [
+    {
+      "courseId": "BIO101",
+      "courseName": "Introduction to Biology",
+      "id": "3bf3"
+    },
+    {
+      "courseId": "PHYS101",
+      "courseName": "Introduction to Physics",
+      "id": "349d"
+    },
+    {
+      "courseId": "HIST201",
+      "courseName": "World History",
+      "id": "5b9e"
+    },
+    {
+      "courseId": "CHEM101",
+      "courseName": "General Chemistry",
+      "id": "b93e"
+    }
+  ]
+}
