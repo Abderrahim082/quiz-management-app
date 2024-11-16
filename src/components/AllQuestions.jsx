@@ -1,8 +1,8 @@
-// src/components/AllQuestions.jsx
-import React, { useState, useEffect } from 'react';
+
+import{ useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchQuestions, updateQuestion, deleteQuestion, addQuestion } from '../slices/quizSlice';
+import { fetchQuestions, deleteQuestion, addQuestion ,deleteAllQuestions} from '../slices/quizSlice';
 import axios from 'axios';
 import { X } from 'lucide-react';
 
@@ -14,14 +14,8 @@ export default function AllQuestions() {
   const dispatch = useDispatch();
   const questions = useSelector(state => state.quiz.questions[quizId] || []);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
-  const [editingId, setEditingId] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
-  const [editForm, setEditForm] = useState({
-    question: '',
-    answers: ['', '', '', ''],
-    correctAnswer: ''
-  });
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     answers: ['', '', '', ''],
@@ -58,41 +52,85 @@ export default function AllQuestions() {
     });
   };
 
-  const handleBulkDelete = () => {
-    // Delete all selected questions
-    selectedQuestions.forEach(id => {
-      handleDelete()
-    });
-    setSelectedQuestions([]);
-    setSelectAll();
-  };
-  const handleEdit = (question) => {
-    setEditingId(question.id);
-    setEditForm(question);
-  };
-
-  const handleSaveUpdate = async () => {
-    await dispatch(updateQuestion({ quizId, question: editForm }));
-    setEditingId(null);
-  };
-
   const handleDelete = async () => {
-    if (selectedQuestions.length === 0) return;
-
-    if (window.confirm(`Are you sure you want to delete ${selectedQuestions.length === 1 ? 'this question' : 'these questions'}?`)) {
-      try {
-        const questionToDelete = questions.find(q => q.id === selectedQuestions[0]);
-        if (questionToDelete) {
-          await dispatch(deleteQuestion({ quizId, questionId: questionToDelete.id }));
-          setSelectedQuestions([]);
-        }
-      } catch (error) {
-        console.error('Error deleting question:', error);
+    const selectedCount = selectedQuestions.length;
+  
+    // Check if there are any selected questions
+    if (selectedCount === 0) return;
+  
+    // Create a confirmation message
+    const confirmationMessage = selectedCount === 1
+      ? 'Are you sure you want to delete this question?'
+      : selectedCount === questions.length
+        ? 'Are you sure you want to delete all questions?'
+        : `Are you sure you want to delete these ${selectedCount} questions?`;
+  
+    // Show confirmation dialog
+    if (!window.confirm(confirmationMessage)) {
+      return; // Exit if the user cancels
+    }
+  
+    try {
+      if (selectedCount === 1) {
+        // Delete a single question
+        await dispatch(deleteQuestion({ quizId, questionId: selectedQuestions[0] }));
+      } else if (selectedCount === questions.length) {
+        // Delete all questions
+        await dispatch(deleteAllQuestions({ quizId, questionIds: selectedQuestions }));
+      } else {
+        // Delete multiple selected questions
+        await Promise.all(selectedQuestions.map(questionId => 
+          dispatch(deleteQuestion({ quizId, questionId }))
+        ));
       }
+  
+      // Clear the selected questions after deletion
+      setSelectedQuestions([]);
+  
+      // Provide feedback to the user
+      alert(`Successfully deleted ${selectedCount === 1 ? 'the question' : selectedCount === questions.length ? 'all questions' : `${selectedCount} questions`}.`);
+      
+      // Optionally call setSelectAll if needed
+      setSelectAll();
+    } catch (error) {
+      console.error('Error deleting questions:', error);
+      alert('An error occurred while deleting the questions. Please try again.');
     }
   };
+  // const handleBulkDelete = async () => {
+  //   // Check if there are any selected questions
+  //   if (selectedQuestions.length === 0) return;
+  
+  //   // Create a confirmation message
+  //   const confirmationMessage = `Are you sure you want to delete ${selectedQuestions.length === 1 ? 'this question' : 'these questions'}?`;
+  
+  //   // Show confirmation dialog
+  //   if (!window.confirm(confirmationMessage)) {
+  //     return; // Exit if the user cancels
+  //   }
+  
+  //   try {
+  //     // Filter out the questions to delete based on selected IDs
+  //     const questionsToDelete = questions.filter(q => selectedQuestions.includes(q.id));
+  
+  //     // Perform deletion for all selected questions
+  //     await Promise.all(questionsToDelete.map(question => 
+  //       dispatch(deleteQuestion({ quizId, questionId: question.id }))
+  //     ));
+  
+  //     // Clear the selected questions after deletion
+  //     setSelectedQuestions([]);
+  
+  //     // Provide feedback to the user  
+  //     // Optionally call setSelectAll if needed
+  //     setSelectAll();
+  //   } catch (error) {
+  //     console.error('Error deleting questions:', error);
+  //     alert('An error occurred while deleting the questions. Please try again.');
+  //   }
+  // };
 
-
+  
   const handleAddQuestion = async () => {
     await dispatch(addQuestion({ quizId, question: newQuestion }));
     setIsAddModalOpen(false);
@@ -102,22 +140,81 @@ export default function AllQuestions() {
       correctAnswer: ''
     });
   };
-
-  const handleSaveSelectedQuestions = async () => {
-    try {
-      const quiz = await axios.get(`${BASE_URL}/quizzes/${quizId}`);
-      const selectedQuestionsData = questions.filter(q => selectedQuestions.includes(q.id));
-
-      await axios.put(`${BASE_URL}/quizzes/${quizId}`, {
-        ...quiz.data,
-        questionsSelected: selectedQuestionsData
-      });
-      navigate('/');
-    } catch (error) {
-      console.error('Error saving selected questions:', error);
-    }
+  const handleUploadQuestions = () => {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+  
+    fileInput.onchange = async () => {
+      if (!fileInput.files || fileInput.files.length === 0) {
+        console.error('No file selected for upload.');
+        return;
+      }
+  
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+  
+      reader.onload = async () => {
+        try {
+          const csvData = reader.result;
+          const newQuestions = CSVToJson(csvData); // Convert CSV to JSON (returns an array of questions)
+  
+          // Fetch the target quiz by its ID
+          const { data: existingQuiz } = await axios.get(`${BASE_URL}/quizzes/${quizId}`);
+          console.log(existingQuiz); // Log the existing quiz object
+  
+          if (!existingQuiz) {
+            console.error(`Quiz with ID ${quizId} not found.`);
+            return;
+          }
+  
+          // Ensure existingQuiz.questions is an array
+          const existingQuestions = Array.isArray(existingQuiz.questions) ? existingQuiz.questions : [];
+  
+          // Merge new questions into the existing questions array
+          const updatedQuestions = [...existingQuestions, ...newQuestions];
+  
+          // Update the quiz with the new questions
+          await axios.put(`${BASE_URL}/quizzes/${quizId}`, {
+            ...existingQuiz,
+            questions: updatedQuestions,
+          });
+  
+          console.log('Questions uploaded and added successfully.');
+          dispatch(fetchQuestions(quizId)); // Refresh questions in the app state
+        } catch (error) {
+          console.error('Error uploading questions:', error);
+        }
+      };
+  
+      reader.readAsText(file);
+    };
+  
+    fileInput.click();
   };
-
+  // Helper function to convert CSV to JSON (returns an array of questions)
+  const CSVToJson = (csv) => {
+    const lines = csv.split('\n');
+    const headers = lines[0].split(',');
+  
+    const questions = [];
+  
+    for (let i = 1; i < lines.length; i++) {
+      const currentLine = lines[i].split(',');
+  
+      if (currentLine.length < headers.length) continue; // Skip incomplete lines
+  
+      questions.push({
+        id: currentLine[headers.indexOf('id')], // Include the ID
+        question: currentLine[headers.indexOf('question')],
+        answers: currentLine[headers.indexOf('answers')].split(';'), // assuming answers are separated by ';'
+        correctAnswer: currentLine[headers.indexOf('correctAnswer')],
+      });
+    }
+  
+    return questions;
+  };
+  
   return (
     <div className="container mx-auto p-4">
       <div className="overflow-x-auto">
@@ -134,7 +231,6 @@ export default function AllQuestions() {
               <th className="p-2">Question</th>
               <th className="p-2">Options</th>
               <th className="p-2">Correct Answer</th>
-              <th className="p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -147,69 +243,16 @@ export default function AllQuestions() {
                     onChange={() => handleSelect(question.id)}
                   />
                 </td>
+                <td className="p-2">{question.question}</td>
                 <td className="p-2">
-                  {editingId === question.id ? (
-                    <input
-                      value={editForm.question}
-                      onChange={e => setEditForm({ ...editForm, question: e.target.value })}
-                      className="w-full p-1 border rounded"
-                    />
-                  ) : (
-                    question.question
-                  )}
-                </td>
-                <td className="p-2">
-                  {editingId === question.id ? (
-                    editForm.answers.map((answer, idx) => (
-                      <input
-                        key={`edit-answer-${idx}`}
-                        value={answer}
-                        onChange={e => {
-                          const newAnswers = [...editForm.answers];
-                          newAnswers[idx] = e.target.value;
-                          setEditForm({ ...editForm, answers: newAnswers });
-                        }}
-                        className="w-full p-1 border rounded mb-1"
-                      />
-                    ))
-                  ) : (
-                    <ul> {question.answers.map((answer, idx) => (
+                  <ul>
+                    {question.answers.map((answer, idx) => (
                       <li key={`answer-${question.id}-${idx}`}>{answer}</li>
-                    ))}</ul>
-                  )}
+                    ))}
+                  </ul>
                 </td>
-                <td className="p-2">
-                  {editingId === question.id ? (
-                    <select
-                      value={editForm.correctAnswer}
-                      onChange={e => setEditForm({ ...editForm, correctAnswer: e.target.value })}
-                      className="w-full p-1 border rounded"
-                    >
-                      {editForm.answers.map((answer, idx) => (
-                        <option key={`correct-answer-${idx}`} value={answer}>{answer}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    question.correctAnswer
-                  )}
-                </td>
-                <td className="p-2">
-                  {editingId === question.id ? (
-                    <button
-                      onClick={handleSaveUpdate}
-                      className="bg-green-500 text-white px-2 py-1 rounded"
-                    >
-                      Save Updates
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleEdit(question)}
-                      className="bg-blue-500 text-white px-2 py-1 rounded"
-                    >
-                      Edit
-                    </button>
-                  )}
-                </td>
+                <td className="p-2">{question.correctAnswer}</td>
+                
               </tr>
             ))}
           </tbody>
@@ -232,17 +275,17 @@ export default function AllQuestions() {
           </button>
           {selectedQuestions.length > 0 && (
             <button
-              onClick={handleBulkDelete}
+              onClick={handleDelete}
               className="bg-red-500 text-white px-4 py-2 rounded mr-2"
             >
               Delete Selected
             </button>
           )}
           <button
-            onClick={handleSaveSelectedQuestions}
+            onClick={handleUploadQuestions}
             className="bg-green-500 text-white px-4 py-2 rounded"
           >
-            Save Changes
+            Upload Questions
           </button>
         </div>
       </div>
@@ -300,4 +343,14 @@ export default function AllQuestions() {
       )}
     </div>
   );
-}
+};
+
+
+
+
+
+
+
+
+
+
